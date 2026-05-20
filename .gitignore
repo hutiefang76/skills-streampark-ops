@@ -1,0 +1,20 @@
+# 真实凭据 — 永不入库
+config.ini
+scripts/sp_batch_ui/config.json
+scripts/sp_batch_ui/data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.venv312/
+
+# IDE
+.idea/
+.vscode/
+
+# 日志/临时
+*.log
+*.tmp
+tmp/

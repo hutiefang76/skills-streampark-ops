@@ -1,0 +1,24 @@
+; StreamPark Ops — 配置模板
+; 复制为 config.ini 后填写真实凭据。config.ini 不入 git。
+;
+; 多环境支持：每个环境一个 [env:<name>] section。
+
+[env:uat]
+base     = http://STREAMPARK_UAT_HOST:31000
+user     = admin
+password = REPLACE_ME
+
+[env:prod]
+base     = http://STREAMPARK_PROD_HOST:31000
+user     = admin
+password = REPLACE_ME
+
+; 全局默认（命令行 --env 缺省时使用）
+[default]
+env = uat
+
+; HTTP 行为
+[http]
+timeout      = 30
+no_proxy     = 10.0.0.0/8,localhost,*
+trust_env    = false

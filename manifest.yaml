@@ -1,0 +1,43 @@
+# StreamPark Ops Skill — kdwl manifest 引用规则
+#
+# 用于 kdwl/public/streampark-ops/ 渲染 config.ini 时，从 kdwl/credentials.ini
+# 的 streampark_envs section 抽取多环境凭据。
+
+name: streampark-ops
+version: 1.0.0
+type: middleware
+upstream: git@github.com:hutiefang76/skills-streampark-ops.git
+
+# 凭据渲染：source = kdwl/credentials.ini, target = 本 skill code/config.ini
+config_template:
+  target: code/config.ini
+  body: |
+    [env:uat]
+    base     = {{ streampark_uat.base }}
+    user     = {{ streampark_uat.user }}
+    password = {{ streampark_uat.password }}
+
+    [env:prod]
+    base     = {{ streampark_prod.base }}
+    user     = {{ streampark_prod.user }}
+    password = {{ streampark_prod.password }}
+
+    [default]
+    env = uat
+
+    [http]
+    timeout   = 30
+    no_proxy  = 10.0.0.0/8,localhost,*
+    trust_env = false
+
+python:
+  version: ">=3.12"
+  requirements: requirements.txt
+
+commands:
+  - name: sp_apps_list
+    script: scripts/sp_apps_list.py
+    description: 列出 StreamPark Flink 应用（只读）
+  - name: sp_deploy_batch
+    script: scripts/sp_deploy_batch.py
+    description: 创建 MongoDB→Doris 批量回灌应用（写）
