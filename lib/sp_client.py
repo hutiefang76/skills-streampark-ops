@@ -25,7 +25,8 @@ class SPClient:
         apps = sp.list_apps()
     """
 
-    def __init__(self, base: str, user: str, password: str, timeout: int = 30):
+    def __init__(self, base: str, user: str, password: str, timeout: int = 30,
+                 trust_env: bool = False):
         self.base = base.rstrip('/')
         self.user = user
         self.password = password
@@ -33,10 +34,12 @@ class SPClient:
         self.token: Optional[str] = None
         self.user_id: Optional[int] = None
         self.team_id: Optional[int] = None
-        # 强制绕过系统代理 — StreamPark 内网部署
-        for k in ('HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
-                  'ALL_PROXY', 'all_proxy'):
-            os.environ.pop(k, None)
+        # 默认 strip 所有 proxy env (StreamPark 内网部署最常见情况).
+        # trust_env=True 时保留 (跨外网 demo, 或 proxy 必经路径).
+        if not trust_env:
+            for k in ('HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
+                      'ALL_PROXY', 'all_proxy'):
+                os.environ.pop(k, None)
 
     @classmethod
     def from_config(cls, env: str, config_path: Optional[str] = None) -> 'SPClient':
@@ -52,11 +55,14 @@ class SPClient:
         if section not in cfg:
             raise SPError(f"env [{section}] missing in {config_path}")
         timeout = int(cfg.get('http', 'timeout', fallback='30')) if cfg.has_section('http') else 30
+        trust_env_raw = cfg.get('http', 'trust_env', fallback='false') if cfg.has_section('http') else 'false'
+        trust_env = trust_env_raw.strip().lower() in ('true', 'yes', '1', 'on')
         return cls(
             base=cfg[section]['base'],
             user=cfg[section]['user'],
             password=cfg[section]['password'],
             timeout=timeout,
+            trust_env=trust_env,
         )
 
     def _http(self, method: str, path: str, headers: Optional[dict] = None,

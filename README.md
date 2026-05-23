@@ -1,67 +1,100 @@
 # skills-streampark-ops
 
-Apache StreamPark REST API 运维 skill — Flink 作业平台一句话操控。
+Apache StreamPark REST API 运维 skill — Flink 作业平台一句话操控,跨平台 (macOS/Linux/Windows)。
 
 ## 能力
 
-- 查询：列出所有 Flink 应用、单应用详情、状态/构建/日志
-- 部署：创建批任务（MongoDB→Doris 批量回灌为典型场景）
-- Dashboard：单文件 Web UI（端口 18792），可视化挑选 / 重跑 / 阈值调节
+- 查询: 列出所有 Flink 应用、单应用详情、状态/构建/日志
+- 部署: 创建批任务 (MongoDB→Doris 批量回灌为典型场景, 默认值需按业务调)
+- Dashboard: 单文件 Web UI (端口 18792), 可视化挑选 / 重跑 / 阈值调节
 
-## 安装
+## 装
 
-```cmd
-git clone git@github.com:hutiefang76/skills-streampark-ops.git
-cd skills-streampark-ops
+```bash
+# 通过 frank (推荐)
+frank install streampark-ops
 
-copy config.ini.example config.ini
-notepad config.ini      :: 填 base / user / password / team_id
-
-setup.bat               :: 自动建 .venv (Python 3.12+) + 装依赖
+# 或直接 git clone
+git clone https://github.com/hutiefang76/skills-streampark-ops.git ~/.claude/skills/streampark-ops
 ```
 
-## 验证
+## 用
 
-```cmd
-.venv\Scripts\python.exe scripts\sp_apps_list.py --env uat
+```bash
+cd ~/.claude/skills/streampark-ops
+
+# Mac/Linux
+bash setup.sh
+# Windows
+# setup.bat
+
+cp config.ini.example config.ini
+# 编辑 config.ini 填 base/user/password
+
+.venv/bin/python scripts/sp_apps_list.py --env local       # Mac/Linux
+# .venv\Scripts\python.exe scripts\sp_apps_list.py --env local  # Windows
 ```
 
-预期：返回该环境所有 Flink 应用 jobName + state 表格。
+完整命令清单见 `SKILL.md`。
+
+## Demo
+
+```bash
+# 本机起一个 StreamPark (用 frank 仓库的 demo stack):
+git clone https://github.com/hutiefang76/skills-frank.git
+cd skills-frank/deploy/test-stack
+docker compose up -d streampark
+# 浏览器开 http://localhost:10000, 账号 admin/streampark
+```
+
+然后 `config.ini` 用 `localhost:10000 / admin / streampark`, 直接 `sp_apps_list.py --env local` 就能看到 demo 集群的应用。
 
 ## 配置
 
-`config.ini` 按环境分 section：
+`config.ini` 按环境分 section:
 
 ```ini
-[env:uat]
-base = http://10.0.0.121:31000
-user = admin
+[env:local]
+base     = http://localhost:10000
+user     = admin
 password = streampark
 
-[env:prod]
-base = http://prod-streampark.example:31000
-user = admin
-password = ***
+[env:uat]
+base     = http://your-streampark-uat:10000
+user     = admin
+password = your-password
+
+[http]
+trust_env = false   ; 内网部署 strip 系统 proxy; 跨外网 demo 改 true
 ```
 
 ## 文件结构
 
 ```
 skills-streampark-ops/
-├── SKILL.md                  AI 加载入口（YAML frontmatter + 工作流）
+├── SKILL.md                  AI 加载入口 (YAML frontmatter + 工作流)
 ├── README.md                 本文件
-├── manifest.yaml             依赖声明 + config 渲染规则（接入 kdwl 时使用）
-├── requirements.txt          Python 依赖
+├── manifest.yaml             依赖声明 (接入用户私有 manifest 时使用)
+├── requirements.txt          Python 依赖 (requests / urllib 内置)
 ├── config.ini.example        配置模板
-├── setup.bat                 一键安装
+├── setup.sh                  Mac/Linux 一键装
+├── setup.bat                 Windows 一键装
 ├── lib/
-│   └── sp_client.py          StreamPark HTTP 客户端
+│   └── sp_client.py          StreamPark HTTP 客户端 (trust_env 可控)
 └── scripts/
-    ├── sp_apps_list.py       列应用（只读）
-    ├── sp_app_show.py        查应用（只读）
-    ├── sp_deploy_batch.py    创建批应用（写）
-    └── sp_batch_ui/          Web Dashboard（端口 18792）
+    ├── sp_apps_list.py       列应用 (只读)
+    ├── sp_app_show.py        查应用 (只读)
+    ├── sp_deploy_batch.py    创建批应用 (写, 默认参数面向 KDWL 业务, demo 必须 --jar/--main-class 覆盖)
+    └── sp_batch_ui/          Web Dashboard (端口 18792)
 ```
+
+## 平台支持
+
+| OS | setup | 备注 |
+|----|-------|------|
+| macOS | `bash setup.sh` | 需 python 3.8+ |
+| Linux | `bash setup.sh` | 同上 |
+| Windows | `setup.bat` | python 3.8+, venv 在 `.venv\Scripts\` |
 
 ## 凭据安全
 

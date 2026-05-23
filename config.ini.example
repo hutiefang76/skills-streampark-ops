@@ -1,24 +1,32 @@
 ; StreamPark Ops — 配置模板
-; 复制为 config.ini 后填写真实凭据。config.ini 不入 git。
+; 复制为 config.ini 后填写真实凭据 (config.ini 已在 .gitignore)
 ;
-; 多环境支持：每个环境一个 [env:<name>] section。
+; Demo: 用 frank 仓库 deploy/test-stack/docker-compose.yml 起一个本地 streampark
+;   docker compose -f deploy/test-stack/docker-compose.yml up -d streampark
+;   默认 http://localhost:10000, 账号 admin/streampark
+
+[env:local]
+base     = http://localhost:10000
+user     = admin
+password = streampark
 
 [env:uat]
-base     = http://STREAMPARK_UAT_HOST:31000
+base     = http://your-streampark-uat-host:10000
 user     = admin
 password = REPLACE_ME
 
 [env:prod]
-base     = http://STREAMPARK_PROD_HOST:31000
+base     = http://your-streampark-prod-host:10000
 user     = admin
 password = REPLACE_ME
 
-; 全局默认（命令行 --env 缺省时使用）
+; 默认 env (命令行 --env 缺省时用)
 [default]
-env = uat
+env = local
 
 ; HTTP 行为
+; - trust_env = false: strip 所有 HTTP_PROXY/HTTPS_PROXY env (内网部署默认开)
+; - trust_env = true:  保留 system proxy (跨外网 demo / proxy 必经路径时开)
 [http]
-timeout      = 30
-no_proxy     = 10.0.0.0/8,localhost,*
-trust_env    = false
+timeout   = 30
+trust_env = false
