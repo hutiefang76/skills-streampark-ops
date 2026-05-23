@@ -1,14 +1,16 @@
-"""创建 / 复用 StreamPark MongoDB→Doris 批量回灌应用。
+"""创建 / 复用 StreamPark 批量任务应用 (示例: MongoDB→Doris 模式).
 
 用法:
-    python scripts/sp_deploy_batch.py --env uat --start 20260501 --end 20260507
-    python scripts/sp_deploy_batch.py --env uat --start 20260501 --end 20260507 --dry-run
+    python scripts/sp_deploy_batch.py --env local --start 20260501 --end 20260507 \\
+        --flink-image apache/flink:1.20.0 \\
+        --main-class com.example.MyBatchJob \\
+        --jar my-job-1.0.jar \\
+        --module my-job-1.0
 
-参数:
-    --jar-module / --main-class / --flink-image 可覆盖默认值（按业务调整）
-    --nacos-addr / --nacos-data-id 注入 dynamicProperties
+    --dry-run 看 payload 不真创建.
 
-默认值参考 realtime-job 项目，适用于 KDWL Mongo→Doris 批任务。其他业务可改默认参数。
+# 默认值 = 占位字符串 (PLACEHOLDER), demo / 测试用户**必须**用 --flink-image / --main-class /
+# --jar / --module / --nacos-addr 覆盖. 不覆盖直接跑会 fail (避免误用别人的镜像/jar/地址).
 """
 import os
 import sys
@@ -22,16 +24,26 @@ sys.path.insert(0, ROOT)
 from lib.sp_client import SPClient, SPError
 
 
-DEFAULT_JOB_NAME = "mongo-batch-{start}-{end}"
-DEFAULT_MAIN_CLASS = "com.liaoliao.car.rose.MongoDbToDorisBatchJob"
-DEFAULT_FLINK_IMAGE = "10.0.0.15:58070/public/apache/flink:1.20.3-scala_2.12-java11-shanghai-s3"
-DEFAULT_MODULE = "rose-realtime-flink-1.0-SNAPSHOT"
-DEFAULT_JAR = "rose-realtime-flink-1.0-SNAPSHOT.jar"
-DEFAULT_NACOS_ADDR = "10.0.0.121:31531"
-DEFAULT_NACOS_DATA_ID = "realtime-job-data-prod.yaml"
-DEFAULT_NS = "streampark-job"
+# 占位字符串 — 用户必须用 --xxx 覆盖, 不覆盖 main 会检测并报错
+DEFAULT_JOB_NAME = "demo-batch-{start}-{end}"
+DEFAULT_MAIN_CLASS = "PLACEHOLDER_MAIN_CLASS"
+DEFAULT_FLINK_IMAGE = "PLACEHOLDER_FLINK_IMAGE"
+DEFAULT_MODULE = "PLACEHOLDER_MODULE"
+DEFAULT_JAR = "PLACEHOLDER_JAR"
+DEFAULT_NACOS_ADDR = "PLACEHOLDER_NACOS_ADDR"
+DEFAULT_NACOS_DATA_ID = "PLACEHOLDER_NACOS_DATA_ID"
+DEFAULT_NS = "default"
 DEFAULT_PROJECT_ID = "100001"
 DEFAULT_VERSION_ID = "100001"
+
+
+def _abort_if_placeholder(value: str, flag: str) -> None:
+    """Fail-fast 检查: 用户传了占位字符串 (没覆盖) → 终止."""
+    if value.startswith("PLACEHOLDER_"):
+        print(f"[ERROR] {flag} not provided. 这个 skill 是通用模板, 必须显式传值.",
+              file=sys.stderr)
+        print(f"  例: --{flag.replace('_', '-')} <your-actual-value>", file=sys.stderr)
+        sys.exit(2)
 
 
 def build_payload(start: str, end: str, args_ns) -> dict:
@@ -90,7 +102,7 @@ def build_payload(start: str, end: str, args_ns) -> dict:
 
 
 def main():
-    p = argparse.ArgumentParser(description='Deploy MongoDB→Doris batch app to StreamPark')
+    p = argparse.ArgumentParser(description='Deploy batch app to StreamPark (示例 MongoDB→Doris 模式)')
     p.add_argument('--env', required=True)
     p.add_argument('--start', required=True, help='YYYYMMDD start date')
     p.add_argument('--end', required=True, help='YYYYMMDD end date')
@@ -114,10 +126,19 @@ def main():
     p.add_argument('--flink-env', default='uat')
     p.add_argument('--nacos-addr', default=DEFAULT_NACOS_ADDR)
     p.add_argument('--nacos-data-id', default=DEFAULT_NACOS_DATA_ID)
-    p.add_argument('--nacos-password', default='5KI0WkQGkTi9m62vHYNI',
-                   help='inject into dynamicProperties (UAT default)')
+    p.add_argument('--nacos-password', required=True,
+                   help='Nacos password injected into Flink dynamicProperties — required, '
+                        'read from $NACOS_PASSWORD env or vault; **never** hardcode in scripts')
 
     args = p.parse_args()
+
+    # Fail-fast: 检测用户没覆盖占位字符串 (公开 demo 仓库默认 = 占位, 不是真业务值)
+    _abort_if_placeholder(args.main_class, 'main_class')
+    _abort_if_placeholder(args.flink_image, 'flink_image')
+    _abort_if_placeholder(args.module, 'module')
+    _abort_if_placeholder(args.jar, 'jar')
+    _abort_if_placeholder(args.nacos_addr, 'nacos_addr')
+    _abort_if_placeholder(args.nacos_data_id, 'nacos_data_id')
 
     try:
         sp = SPClient.from_config(args.env)
